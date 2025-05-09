@@ -135,7 +135,7 @@ if st.button("Confirm and Save Data", disabled=st.session_state["save_button_cli
 
         # Save data to Google Sheets
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        row = [timestamp, " | ".join(file_links)]
+        row = [timestamp, ocr_text, pallet_count, file_link,total_pallets]
         sheet.append_row(row)
 
         st.success("Data successfully saved to Google Drive & Google Sheets!")
