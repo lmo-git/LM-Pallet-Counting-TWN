@@ -93,7 +93,7 @@ if st.button("Confirm and Save Data", disabled=st.session_state["save_button_cli
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
         ]
-        json_key = st.secrets["gcp"]
+        json_key = st.secrets["GCP"]
         creds = Credentials.from_service_account_info(json_key, scopes=scopes)
 
         gc = gspread.authorize(creds)
