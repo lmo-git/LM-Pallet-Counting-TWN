@@ -147,10 +147,20 @@ if st.button("Confirm and Save Data", disabled=st.session_state["save_button_cli
         # Ensure the file_links is not empty
         if not file_links:
             file_links.append("No Images Uploaded")
-
+        
+        front_file_link = "No Image Uploaded"
+        side_file_link = "No Image Uploaded"
+        
+        if len(file_links) > 0:
+            front_file_link = file_links[0] if len(file_links) > 0 else "No Image Uploaded"
+            side_file_link = file_links[1] if len(file_links) > 1 else "No Image Uploaded"
+        
         # --- Save Data to Google Sheets ---
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        row = [truck_text, timestamp, ocr_text, pallet_count, ", ".join(file_links), total_pallets]
+
+        # Create the row with separate columns for front and side file links
+        row = [truck_text, timestamp, ocr_text, pallet_count, front_file_link, side_file_link, total_pallets]
+
 
         # Append row to the sheet
         sheet.append_row(row)
