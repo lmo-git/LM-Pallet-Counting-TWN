@@ -122,7 +122,7 @@ if st.button("Confirm and Save Data", disabled=st.session_state["save_button_cli
             folder_id = folder.get('id')
 
         # --- Save Front and Side Images ---
-        image_files = [("Front", "front_pallet_temp.jpg"), ("Side", "side_pallet_temp.jpg")]
+        image_files = [("Front", "Front_pallet_temp.jpg"), ("Side", "Side_pallet_temp.jpg")]
         file_links = []
 
         for view_name, temp_image_path in image_files:
