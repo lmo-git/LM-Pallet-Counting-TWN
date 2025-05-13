@@ -80,7 +80,8 @@ except ValueError:
     pallet_count = 0
     st.warning("Pallet count was not a valid number. Defaulting to 0.")
 
-# --- Step 6 & 7: Save to Google Drive & Google Sheets ---
+# --- Step 6: Save data ---
+
 if "save_button_clicked" not in st.session_state:
     st.session_state["save_button_clicked"] = False
 
@@ -89,6 +90,7 @@ if st.button("Confirm and Save Data", disabled=st.session_state["save_button_cli
         # Prevent multiple submissions
         st.session_state["save_button_clicked"] = True
         
+        # --- Authentication ---
         scopes = [
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
@@ -96,16 +98,19 @@ if st.button("Confirm and Save Data", disabled=st.session_state["save_button_cli
         json_key = st.secrets["gcp"]
         creds = Credentials.from_service_account_info(json_key, scopes=scopes)
 
+        # Google Sheets setup
         gc = gspread.authorize(creds)
         sheet = gc.open_by_key("1uGDIKJF9IdfWYNcMj0jdY-D4J1VizjzvuyvaAahiiuQ").sheet1
 
+        # Google Drive setup
         drive_service = build('drive', 'v3', credentials=creds)
 
-        # Create or find 'Pallet' folder in Google Drive
+        # --- Create or Find 'Pallet' Folder ---
         folder_name = "Pallet_TWN"
         query = f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}' and trashed=false"
         results = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
         files = results.get('files', [])
+        
         if files:
             folder_id = files[0]['id']
         else:
@@ -116,26 +121,38 @@ if st.button("Confirm and Save Data", disabled=st.session_state["save_button_cli
             folder = drive_service.files().create(body=file_metadata, fields='id').execute()
             folder_id = folder.get('id')
 
-        # Save front and side images
+        # --- Save Front and Side Images ---
         image_files = [("Front", "front_pallet_temp.jpg"), ("Side", "side_pallet_temp.jpg")]
         file_links = []
 
         for view_name, temp_image_path in image_files:
-            if st.session_state.get(view_name):
-                file_name = f"{view_name.lower()}_pallet_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
-                media = MediaFileUpload(temp_image_path, mimetype='image/jpeg')
-                file_metadata = {
-                    'name': file_name,
-                    'parents': [folder_id]
-                }
-                uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-                uploaded_file_id = uploaded_file.get('id')
-                file_link = f"https://drive.google.com/file/d/{uploaded_file_id}/view?usp=sharing"
-                file_links.append(file_link)
+            # Ensure the file exists before attempting to upload
+            try:
+                with open(temp_image_path, "rb") as file:
+                    file_name = f"{view_name.lower()}_pallet_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+                    media = MediaFileUpload(temp_image_path, mimetype='image/jpeg')
+                    file_metadata = {
+                        'name': file_name,
+                        'parents': [folder_id]
+                    }
+                    uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+                    uploaded_file_id = uploaded_file.get('id')
+                    file_link = f"https://drive.google.com/file/d/{uploaded_file_id}/view?usp=sharing"
+                    file_links.append(file_link)
+            except FileNotFoundError:
+                st.warning(f"File not found: {temp_image_path}")
+            except Exception as e:
+                st.error(f"Error uploading {view_name} image: {e}")
 
-        # Save data to Google Sheets
+        # Ensure the file_links is not empty
+        if not file_links:
+            file_links.append("No Images Uploaded")
+
+        # --- Save Data to Google Sheets ---
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        row = [truck_text,timestamp,ocr_text, pallet_count,file_links,total_pallets]
+        row = [truck_text, timestamp, ocr_text, pallet_count, ", ".join(file_links), total_pallets]
+
+        # Append row to the sheet
         sheet.append_row(row)
 
         st.success("Data successfully saved to Google Drive & Google Sheets!")
